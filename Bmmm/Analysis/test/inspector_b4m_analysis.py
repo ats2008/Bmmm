@@ -49,6 +49,7 @@ handles_mc['genInfo'] = ('generator'         , Handle('GenEventInfoProduct')    
 
 handles = OrderedDict()
 handles['muons'  ] = ('slimmedMuons'                 , Handle('std::vector<pat::Muon>')                   )
+handles['electrons'  ] = ('slimmedElectrons'         , Handle('std::vector<pat::Electron>')                   )
 handles['trk'    ] = ('packedPFCandidates'           , Handle('std::vector<pat::PackedCandidate>')        )
 handles['ltrk'   ] = ('lostTracks'                   , Handle('std::vector<pat::PackedCandidate>')        )
 handles['vtx'    ] = ('offlineSlimmedPrimaryVertices', Handle('std::vector<reco::Vertex>')                )
@@ -144,8 +145,11 @@ for i, event in enumerate(events):
             
     muons = [mu for mu in event.muons if mu.pt()>1. and abs(mu.eta())<2.5 and mu.isPFMuon() and mu.isGlobalMuon()]
     muons.sort(key = lambda x : x.pt(), reverse = True)
+    
+    electrons = [ele for ele in event.electrons if ele.pt()>1. and abs(ele.eta())<2.5 ]
+    electrons.sort(key = lambda x : x.pt(), reverse = True)
 
-    if len(muons)<4:
+    if len(electrons)<4:
         continue
 
     # build analysis candidates

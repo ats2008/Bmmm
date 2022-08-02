@@ -1,4 +1,5 @@
 import numpy as np
+import types
 from scipy import stats
 from PhysicsTools.HeppyCore.utils.deltar import deltaR, deltaPhi, bestMatch
 from itertools import product, combinations
@@ -18,10 +19,11 @@ ROOT.gInterpreter.ProcessLine(cpp_code)
 global vtxfit
 vtxfit = KVFitter()
 
-#global tofit
-#global tofitTrkRefs
-#tofit = ROOT.std.vector('reco::Track')()
-#tofitTrkRefs = ROOT.std.vector('reco::TrackRef')()
+global tofit
+tofit = ROOT.std.vector('reco::Track')()
+
+def candTrack(self):
+    return self.track_candidate
 
 class BToEMuCandidate():
     '''
@@ -32,12 +34,12 @@ class BToEMuCandidate():
         # sort by pt
         self.mu =  mu
         self.ele = ele
-        self.ele_bestTrack = ele.gsfTrack()#ROOT.getTrackFromRef(ele.track())
-        if not self.ele_bestTrack:
-            return None
+        self.ele.track_candidate = ROOT.reco.Track(ele.gsfTrack().get())
+
+        self.ele.candTrack =  types.MethodType( candTrack , self.ele)
         # check that the muon track covariance matrix is pos-def
         self.mu.cov = self.convert_cov(self.mu.bestTrack().covariance())
-        self.ele.cov = self.convert_cov(self.ele_bestTrack.covariance())
+        self.ele.cov = self.convert_cov(self.ele.candTrack().covariance())
         self.mu.is_cov_pos_def = self.is_pos_def(self.mu.cov)
         self.ele.is_cov_pos_def = self.is_pos_def(self.ele.cov)
         # choose as PV the one that's closest to the leading muon in the dz parameter
@@ -57,46 +59,45 @@ class BToEMuCandidate():
         # we'll fit a vertex out of the three muons, shall we? 
         # ideally this can be triggered on demand, and just build a skinny candidate to 
         # check simple things, such as mass etc
-        #tofit.clear()
         #tofitTrkRefs.clear()
-        tofit = ROOT.std.vector('reco::Track')()
-        tofitTrkRefs = ROOT.std.vector('reco::TrackRef')()
+
+        tofit.clear()
         tofit.push_back(self.mu.bestTrack())
-        tofitTrkRefs.push_back(self.ele.closestCtfTrackRef())
+        tofit.push_back(self.ele.candTrack())
         
-        #self.vtx = vtxfit.Fit(tofitTrkRefs,tofit)
-        self.vtx = ele
-        self_vtx_isValid=False
-        self.vtx.chi2 = self.vtx.normalisedChiSquared() if self_vtx_isValid else np.nan
-        self.vtx.prob = (1. - stats.chi2.cdf(self.vtx.chi2, 1)) if self_vtx_isValid else np.nan 
+        self.vtx = vtxfit.Fit(tofit)
+        #self.vtx = ele
+        #self.vtx.isValid()=False
+        self.vtx.chi2 = self.vtx.normalisedChiSquared() if self.vtx.isValid() else np.nan
+        self.vtx.prob = (1. - stats.chi2.cdf(self.vtx.chi2, 1)) if self.vtx.isValid() else np.nan 
 
         # now compute some displacement related quantities, here in the transverse plane.
         # later can add 3D quantities
-        self.lxy = ROOT.VertexDistanceXY().distance(self.bs, self.vtx.vertexState()) if self_vtx_isValid else np.nan
+        self.lxy = ROOT.VertexDistanceXY().distance(self.bs, self.vtx.vertexState()) if self.vtx.isValid() else np.nan
 
         vect_lxy = ROOT.Math.DisplacementVector3D('ROOT::Math::Cartesian3D<double>,ROOT::Math::DefaultCoordinateSystemTag')( 
                     self.vtx.position().x() - self.bs.position().x(),
                     self.vtx.position().y() - self.bs.position().y(),
-                    0. ) if self_vtx_isValid else np.nan
+                    0. ) if self.vtx.isValid() else np.nan
 
         vect_pt = ROOT.Math.DisplacementVector3D('ROOT::Math::Cartesian3D<double>,ROOT::Math::DefaultCoordinateSystemTag')( 
                     self.px(),
                     self.py(),
-                    0. ) if self_vtx_isValid else np.nan
+                    0. ) if self.vtx.isValid() else np.nan
 
-        self.vtx.cos = vect_pt.Dot(vect_lxy) / (vect_pt.R() * vect_lxy.R()) if (self_vtx_isValid and vect_lxy.R() > 0.) else np.nan
+        self.vtx.cos = vect_pt.Dot(vect_lxy) / (vect_pt.R() * vect_lxy.R()) if (self.vtx.isValid() and vect_lxy.R() > 0.) else np.nan
         
         self.pv_to_sv = ROOT.Math.XYZVector(
                             (self.vtx.position().x() - self.pv.position().x()), 
                             (self.vtx.position().y() - self.pv.position().y()),
                             (self.vtx.position().z() - self.pv.position().z())
-                        ) if self_vtx_isValid else np.nan
-        self.Bdirection  = self.pv_to_sv/np.sqrt(self.pv_to_sv.Mag2()) if self_vtx_isValid else np.nan                  
-        self.Bdir_eta    = self.Bdirection.eta() if self_vtx_isValid else np.nan                                
-        self.Bdir_phi    = self.Bdirection.phi() if self_vtx_isValid else np.nan                                
-        self.emu_p4_par  = self.p4().Vect().Dot(self.Bdirection) if self_vtx_isValid else np.nan                   
-        self.emu_p4_perp = np.sqrt(self.p4().Vect().Mag2() - self.emu_p4_par*self.emu_p4_par) if self_vtx_isValid else np.nan
-        self.mcorr       = np.sqrt(self.p4().mass()*self.p4().mass() + self.emu_p4_perp*self.emu_p4_perp) + self.emu_p4_perp if self_vtx_isValid else np.nan
+                        ) if self.vtx.isValid() else np.nan
+        self.Bdirection  = self.pv_to_sv/np.sqrt(self.pv_to_sv.Mag2()) if self.vtx.isValid() else np.nan                  
+        self.Bdir_eta    = self.Bdirection.eta() if self.vtx.isValid() else np.nan                                
+        self.Bdir_phi    = self.Bdirection.phi() if self.vtx.isValid() else np.nan                                
+        self.emu_p4_par  = self.p4().Vect().Dot(self.Bdirection) if self.vtx.isValid() else np.nan                   
+        self.emu_p4_perp = np.sqrt(self.p4().Vect().Mag2() - self.emu_p4_par*self.emu_p4_par) if self.vtx.isValid() else np.nan
+        self.mcorr       = np.sqrt(self.p4().mass()*self.p4().mass() + self.emu_p4_perp*self.emu_p4_perp) + self.emu_p4_perp if self.vtx.isValid() else np.nan
             
     def convert_cov(self, m):
         return np.array([[m(i,j) for j in range(m.kCols)] for i in range(m.kRows)])

@@ -160,31 +160,21 @@ for i, event in enumerate(events):
     # build analysis candidates
 
     cands = []
-    i=0
     for mu,ele  in product(muons,electrons): 
-        i+=1
-        #print(i)
+     #   print("Doing Evt : ",i)
         if not  mu.bestTrack():
-     #       print("\tNo mu Track ")
+            print("\tNo mu Track ")
             continue
-     #   else:
-     #       print("\tGot mu Track")
-        if not  ele.track():
-     #       print("\tNo Track ")
+        if not  ele.gsfTrack().get():
+            print("\tNo ele Track ")
             continue
-     #   else:
-     #       print("\tGot Track")
-        if not  ele.closestCtfTrackRef():
-     #       print("\tNo ctf Track ")
-            continue
-     #  else:
-     #       print("\tGot ctf Track")
-        # BToEMuCandidate muon candidate
         cand = BToEMuCandidate(mu,ele,event.vtx, event.bs)
         if not cand:
             continue
+        if not cand.vtx.isValid():
+            continue
         #  mu - e somewhat close in dz, max distance 1 cm
-        #if abs( cand.mu.bestTrack().dz(cand.pv.position()) - cand.ele.closestCtfTrackRef().dz(cand.pv.position()) )>1: 
+        #if abs( cand.mu.bestTrack().dz(cand.pv.position()) - cand.ele.candTrack().dz(cand.pv.position()) )>1: 
         #    continue
         
         # filter by mass, first
@@ -218,7 +208,7 @@ for i, event in enumerate(events):
 
     # sort candidates by charge combination and best pointing angle, i.e. cosine closer to 1
     # can implement and use other criteria later
-    cands.sort(key = lambda x : (abs(x.charge())==1, x.vtx.cos), reverse = True)
+    cands.sort(key = lambda x : (abs(x.charge())==0, x.vtx.cos), reverse = True)
     final_cand = cands[0]
       
     # fill the tree    
@@ -250,16 +240,16 @@ for i, event in enumerate(events):
     tofill['bs_x'] = final_cand.bs.position().x()
     tofill['bs_y'] = final_cand.bs.position().y()
 
-    #tofill['vx'] = final_cand.vtx.position().x()
-    #tofill['vy'] = final_cand.vtx.position().y()
-    #tofill['vz'] = final_cand.vtx.position().z()
+    tofill['vx'] = final_cand.vtx.position().x()
+    tofill['vy'] = final_cand.vtx.position().y()
+    tofill['vz'] = final_cand.vtx.position().z()
     tofill['vtx_chi2'] = final_cand.vtx.chi2
     tofill['vtx_prob'] = final_cand.vtx.prob
 
     tofill['cos2d'  ] = final_cand.vtx.cos
-    tofill['lxy'    ] = final_cand.lxy#.value()
-    tofill['lxy_err'] = final_cand.lxy#.error()
-    tofill['lxy_sig'] = final_cand.lxy#.significance()
+    tofill['lxy'    ] = final_cand.lxy.value()
+    tofill['lxy_err'] = final_cand.lxy.error()
+    tofill['lxy_sig'] = final_cand.lxy.significance()
    
     tofill['mu_pt'         ] = final_cand.mu.pt()
     tofill['mu_eta'        ] = final_cand.mu.eta()
@@ -295,16 +285,16 @@ for i, event in enumerate(events):
     tofill['ele_id_wp90'   ]   = final_cand.ele.electronID("mvaEleID-Fall17-noIso-V2-wp90")
     tofill['ele_id_wp80'   ]   = final_cand.ele.electronID("mvaEleID-Fall17-noIso-V2-wp80")
     tofill['ele_id_wpLoose'   ]   = final_cand.ele.electronID("mvaEleID-Fall17-noIso-V2-wpLoose")
-   # tofill['ele_dxy'        ] = final_cand.ele.closestCtfTrackRef().dxy(final_cand.pv.position())
-   # tofill['ele_dxy_e'      ] = final_cand.ele.closestCtfTrackRef().dxyError(final_cand.pv.position(), final_cand.pv.error())
-   # tofill['ele_dxy_sig'    ] = final_cand.ele.closestCtfTrackRef().dxy(final_cand.pv.position()) / final_cand.ele.closestCtfTrackRef().dxyError(final_cand.pv.position(), final_cand.pv.error())
-   # tofill['ele_dz'         ] = final_cand.ele.closestCtfTrackRef().dz(final_cand.pv.position())
-   # tofill['ele_dz_e'       ] = final_cand.ele.closestCtfTrackRef().dzError()
-   # tofill['ele_dz_sig'     ] = final_cand.ele.closestCtfTrackRef().dz(final_cand.pv.position()) / final_cand.ele.closestCtfTrackRef().dzError()
-   # tofill['ele_bs_dxy'     ] = final_cand.ele.closestCtfTrackRef().dxy(final_cand.bs.position())
-   # tofill['ele_bs_dxy_e'   ] = final_cand.ele.closestCtfTrackRef().dxyError(final_cand.bs.position(), final_cand.bs.error())
-   # tofill['ele_bs_dxy_sig' ] = final_cand.ele.closestCtfTrackRef().dxy(final_cand.bs.position()) / final_cand.ele.closestCtfTrackRef().dxyError(final_cand.bs.position(), final_cand.bs.error())
-    tofill['ele_cov_pos_def'] = final_cand.ele.is_cov_pos_def
+    tofill['ele_dxy'        ] = final_cand.ele.candTrack().dxy(final_cand.pv.position())
+    tofill['ele_dxy_e'      ] = final_cand.ele.candTrack().dxyError(final_cand.pv.position(), final_cand.pv.error())
+    tofill['ele_dxy_sig'    ] = final_cand.ele.candTrack().dxy(final_cand.pv.position()) / final_cand.ele.candTrack().dxyError(final_cand.pv.position(), final_cand.pv.error())
+    tofill['ele_dz'         ] = final_cand.ele.candTrack().dz(final_cand.pv.position())
+    tofill['ele_dz_e'       ] = final_cand.ele.candTrack().dzError()
+    tofill['ele_dz_sig'     ] = final_cand.ele.candTrack().dz(final_cand.pv.position()) / final_cand.ele.candTrack().dzError()
+    tofill['ele_bs_dxy'     ] = final_cand.ele.candTrack().dxy(final_cand.bs.position())
+    tofill['ele_bs_dxy_e'   ] = final_cand.ele.candTrack().dxyError(final_cand.bs.position(), final_cand.bs.error())
+    tofill['ele_bs_dxy_sig' ] = final_cand.ele.candTrack().dxy(final_cand.bs.position()) / final_cand.ele.candTrack().dxyError(final_cand.bs.position(), final_cand.bs.error())
+    tofill['ele_cov_pos_def'] = float(final_cand.ele.is_cov_pos_def)
     
     # yeah, need to to work a bit on the definition of isolation    
 #     mu_ch_isolation = max(0., mu.pfIsolationR03().sumChargedHadronPt - sum([ip.pt() for ip in [kp, km, pi] if deltaR(ip, mu)<0.3 and abs(mu.bestTrack().dz(the_pv.position()) - ip.dz(the_pv.position()))<0.2]))
@@ -314,9 +304,8 @@ for i, event in enumerate(events):
 #     tofill['mu_db_n_iso'  ] = mu_dbeta_neutral_isolation
 #     tofill['mu_abs_iso'   ] = (mu_ch_isolation + mu_dbeta_neutral_isolation)
 #     tofill['mu_rel_iso'   ] = (mu_ch_isolation + mu_dbeta_neutral_isolation) / mu.pt()
-        
     ntuple.Fill(array('f', tofill.values()))
-            
+
 fout.cd()
 ntuple.Write()
 fout.Close()

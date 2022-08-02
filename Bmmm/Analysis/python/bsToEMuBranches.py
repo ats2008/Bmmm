@@ -3,6 +3,7 @@ branches = [
     'lumi'              ,
     'event'             ,
     'npv'               ,
+    'ncands'            ,
 
     'mass'              ,
     'mcorr'             ,
@@ -12,8 +13,6 @@ branches = [
     'charge'            ,
 
     'dr'                ,
-
-    'mass'          ,
 
     'pv_x'              ,
     'pv_y'              ,

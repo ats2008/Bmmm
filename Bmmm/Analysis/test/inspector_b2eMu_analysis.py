@@ -49,7 +49,8 @@ handles_mc['genInfo'] = ('generator'         , Handle('GenEventInfoProduct')    
 
 handles = OrderedDict()
 handles['muons'  ] = ('slimmedMuons'                 , Handle('std::vector<pat::Muon>')                   )
-handles['electrons'  ] = ('slimmedElectrons'             , Handle('std::vector<pat::Electron>')                   )
+handles['electrons'  ] = ('slimmedElectrons'         , Handle('std::vector<pat::Electron>')           )
+handles['pfCandidates'  ] = ('packedPFCandidates'    , Handle('std::vector<pat::PackedCandidate>') )
 handles['trk'    ] = ('packedPFCandidates'           , Handle('std::vector<pat::PackedCandidate>')        )
 handles['ltrk'   ] = ('lostTracks'                   , Handle('std::vector<pat::PackedCandidate>')        )
 handles['vtx'    ] = ('offlineSlimmedPrimaryVertices', Handle('std::vector<reco::Vertex>')                )
@@ -176,7 +177,6 @@ for i, event in enumerate(events):
         #  mu - e somewhat close in dz, max distance 1 cm
         #if abs( cand.mu.bestTrack().dz(cand.pv.position()) - cand.ele.candTrack().dz(cand.pv.position()) )>1: 
         #    continue
-        
         # filter by mass, first
         if cand.mass()>10.0:
             continue
@@ -272,6 +272,8 @@ for i, event in enumerate(events):
     tofill['mu_bs_dxy_e'   ] = final_cand.mu.bestTrack().dxyError(final_cand.bs.position(), final_cand.bs.error())
     tofill['mu_bs_dxy_sig' ] = final_cand.mu.bestTrack().dxy(final_cand.bs.position()) / final_cand.mu.bestTrack().dxyError(final_cand.bs.position(), final_cand.bs.error())
     tofill['mu_cov_pos_def'] = final_cand.mu.is_cov_pos_def
+    tofill['mu_trkIsolation']= final_cand.computeTrkMuonIsolation(event.pfCandidates)
+
 
     tofill['ele_pt'         ] = final_cand.ele.pt()
     tofill['ele_eta'        ] = final_cand.ele.eta()

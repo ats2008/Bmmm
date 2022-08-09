@@ -6,8 +6,8 @@ from itertools import product, combinations
 
 import ROOT
 ROOT.gSystem.Load('libBmmmAnalysis')
-from ROOT import KVFitter # VertexDistance3D is contained here, dirt trick!!
-
+from ROOT import KVFitter   # VertexDistance3D is contained here, dirt trick!!
+from ROOT import Utilities
 cpp_code = """
 // Function definition
 reco::Track* getTrackFromRef(reco::GsfTrack *trkRf) { return new reco::Track(*trkRf); }
@@ -19,6 +19,9 @@ ROOT.gInterpreter.ProcessLine(cpp_code)
 global vtxfit
 vtxfit = KVFitter()
 
+global utilities
+utilities= Utilities()
+
 global tofit
 tofit = ROOT.std.vector('reco::Track')()
 
@@ -27,7 +30,7 @@ def candTrack(self):
 
 class BToEMuCandidate():
     '''
-    3-muon candidate.
+    E-Mu candidate.
     MISSING: use the post fit muon momenta
     '''
     def __init__(self, mu , ele , vertices, beamspot):
@@ -44,6 +47,8 @@ class BToEMuCandidate():
         self.ele.is_cov_pos_def = self.is_pos_def(self.ele.cov)
         # choose as PV the one that's closest to the leading muon in the dz parameter
         self.pv = sorted( [vtx for vtx in vertices], key = lambda vtx : abs( self.mu.bestTrack().dz(vtx.position() ) ) )[0]
+        dZs = [ abs( self.mu.bestTrack().dz(vtx.position() ) ) for vtx in vertices ]
+        self.pvIndex = np.argsort(dZs)[0]
         # create a Vertex type of object from the bs coordinates at the z of the chosen PV
         bs_point = ROOT.reco.Vertex.Point(
             beamspot.x(self.pv.z()),
@@ -98,7 +103,11 @@ class BToEMuCandidate():
         self.emu_p4_par  = self.p4().Vect().Dot(self.Bdirection) if self.vtx.isValid() else np.nan                   
         self.emu_p4_perp = np.sqrt(self.p4().Vect().Mag2() - self.emu_p4_par*self.emu_p4_par) if self.vtx.isValid() else np.nan
         self.mcorr       = np.sqrt(self.p4().mass()*self.p4().mass() + self.emu_p4_perp*self.emu_p4_perp) + self.emu_p4_perp if self.vtx.isValid() else np.nan
-            
+
+
+    def computeTrkMuonIsolation( self,pfHandle ):
+        return utilities.computeTrkMuonIsolation(self.mu , self.ele , pfHandle , self.pvIndex ) 
+
     def convert_cov(self, m):
         return np.array([[m(i,j) for j in range(m.kCols)] for i in range(m.kRows)])
 

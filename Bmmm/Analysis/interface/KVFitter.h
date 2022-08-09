@@ -67,6 +67,25 @@ class KVFitter {
       
       return tv;          
     };
+    // constructed from reco::TrackRef and reco::Tack
+    TransientVertex Fit(const std::vector<reco::TrackRef> & trackRefs, const std::vector<reco::Track> & tracks)
+    {
+      // do tau vertex fit
+      std::vector<reco::TransientTrack> tks;
+      for (std::vector<reco::TrackRef>::const_iterator itk = trackRefs.begin(); itk != trackRefs.end(); ++itk){
+          tks.push_back(getTransientTrack(*itk));
+      }
+
+      for (std::vector<reco::Track>::const_iterator itk = tracks.begin(); itk != tracks.end(); ++itk){
+          tks.push_back(getTransientTrack(*itk));
+      }
+    
+      KalmanVertexFitter kvf;
+      TransientVertex tv = kvf.vertex(tks);
+            
+      return tv;    
+    };
+
 
   private:
     OAEParametrizedMagneticField *paramField = new OAEParametrizedMagneticField("3_8T");
